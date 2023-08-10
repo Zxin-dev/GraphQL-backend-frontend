@@ -1,101 +1,89 @@
-import { ApolloServer } from '@apollo/server';
-import { startStandaloneServer } from '@apollo/server/standalone';
+import { ApolloServer } from "@apollo/server";
+import { startStandaloneServer } from "@apollo/server/standalone";
+async function dataRequest(action, options) {
+    const result = await fetch(`https://ap-southeast-1.aws.data.mongodb-api.com/app/data-yrulb/endpoint/data/v1/action/${action}`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "api-key": "ieiBeLsXQ67h0KTo71Jg1WI3zjtfMvKm9YuAs95DvVY738183nHWm6ZV5X4QUAat",
+        },
+        body: JSON.stringify({
+            dataSource: "Cluster0",
+            database: "Graphql-backend",
+            collection: "SocialNetwork",
+            ...options,
+        }),
+    }).then((res) => res.json());
+    return result;
+}
 const typeDefs = `#graphql
-  type Country {
-   phone:Int
-    currency: String
-    code: String
-    name: String
+      type Post {
+      text:String
+      image:[String]
+      userId:String
+      createdAt:String
+      }
+      input PostCreateInput {
+      text:String
+        
   }
-  type Query {
-    countries: [Country],
-    country(code :String):Country
+  input PostUpdateInput {
+    text:String
+    userId:String
   }
-`;
-const sampleCountries = [
-    {
-        "name": "Andorra",
-        "phone": "376",
-        "currency": "EUR",
-        "code": "AD"
-    },
-    {
-        "name": "United Arab Emirates",
-        "phone": "971",
-        "currency": "AED",
-        "code": "AE"
-    },
-    {
-        "name": "Afghanistan",
-        "phone": "93",
-        "currency": "AFN",
-        "code": "AF"
-    },
-    {
-        "name": "Antigua and Barbuda",
-        "phone": "1268",
-        "currency": "XCD",
-        "code": "AG"
-    },
-    {
-        "name": "Anguilla",
-        "phone": "1264",
-        "currency": "XCD",
-        "code": "AI"
-    },
-    {
-        "name": "Albania",
-        "phone": "355",
-        "currency": "ALL",
-        "code": "AL"
-    },
-    {
-        "name": "Armenia",
-        "phone": "374",
-        "currency": "AMD",
-        "code": "AM"
-    },
-    {
-        "name": "Angola",
-        "phone": "244",
-        "currency": "AOA",
-        "code": "AO"
-    },
-    {
-        "name": "Antarctica",
-        "phone": "672",
-        "currency": null,
-        "code": "AQ"
-    },
-    {
-        "name": "Argentina",
-        "phone": "54",
-        "currency": "ARS",
-        "code": "AR"
-    },
-    {
-        "name": "American Samoa",
-        "phone": "1684",
-        "currency": "USD",
-        "code": "AS"
-    },
-];
+  input PostDeleteInput {
+      userId:String
+  }
+    type Query {
+    getAllPost: [Post]
+    getOnePost: Post
+    }
+  
+    type Mutation{
+      createPost(createInput: PostCreateInput!):Post
+      updatePost(id:ID!,updateInput: PostUpdateInput!):Post
+      deletePost(id:ID!):Post
+    }
+  `;
 const resolvers = {
     Query: {
-        countries: () => {
-            return sampleCountries;
+        getAllPost: () => {
+            return dataRequest("find", {});
         },
-        country: (_, args) => {
-            console.log({ args });
-            return sampleCountries.find((country) => country.code === args.code);
-        }
+        getOnePost: () => {
+            return null;
+        },
+    },
+    Mutation: {
+        createPost: async (_, args) => {
+            const { text } = args;
+            const result = await dataRequest("insertOne", {
+                text: text,
+            });
+            return result;
+        },
+        updatePost: () => {
+            return null;
+        },
+        deletePost: () => {
+            return null;
+        },
     },
 };
+// async function getAllData(req: Request, res: Response): Promise<void> {
+//   const result = await dataRequest("find", {});
+//   res.status(200).json(result);
+// }
 const server = new ApolloServer({
     typeDefs,
     resolvers,
 });
-const { url } = await startStandaloneServer(server, {
-    listen: { port: 4000 },
-});
-console.log(`🚀  Server ready at: ${url}`);
+try {
+    const { url } = await startStandaloneServer(server, {
+        listen: { port: 4000 },
+    });
+    console.log(`🚀  Server ready at: ${url}`);
+}
+catch (error) {
+    console.log(error);
+}
