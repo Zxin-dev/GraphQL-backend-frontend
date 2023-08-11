@@ -3,58 +3,87 @@ import dataRequest from "../utils/dataRequest";
 import { startStandaloneServer } from "@apollo/server/standalone";
 import { startServerAndCreateNextHandler } from "@as-integrations/next";
 const typeDefs = `#graphql
-      type Post {
+    type Post {
       text:String
       image:[String]
-      userId:String
       createdAt:String
-      }
-      input PostCreateInput {
+      _id:String
+     }
+    input PostCreateInput {
       text:String
-        
-  }
-  input PostUpdateInput {
-    text:String
-    userId:String
-  }
-  input PostDeleteInput {
-      userId:String
-  }
-    type Query {
-    getAllPost: [Post]
-    getOnePost: Post
+
     }
+    input PostUpdateInput {
+      text:String
+
   
+    }
+    input PostDeleteInput {
+      text:String
+    }
+    type Query {
+      getAllPost: [Post]
+      getOnePost(id:String): Post
+    }
     type Mutation{
-      createPost(createInput: PostCreateInput!):Post
-      updatePost(id:ID!,updateInput: PostUpdateInput!):Post
-      deletePost(id:ID!):Post
+      createPost(createInput: PostCreateInput!):ID
+      updatePost(id:String,updateInput: PostUpdateInput!):Post
+      deletePost(id:String):Post
     }
   `;
 const resolvers = {
   Query: {
-    getAllPost: () => {
-      return "ho";
+    getAllPost: async () => {
+      const result = await dataRequest(`find`, {});
+      return result.documents;
     },
-    getOnePost: () => {
-      return null;
+    getOnePost: async (_: never, args: any) => {
+      const id = args.id;
+      const result = await dataRequest("findOne", {
+        filter: { _id: { $oid: id } },
+      });
+      return result.document;
     },
   },
   Mutation: {
-    createPost: async (_: any, args: any) => {
-      const { text } = args;
-      const result = await dataRequest("insertOne", {
-        data: {
-          text: text,
+    createPost: async (_: never, args: { createInput: { text: string } }) => {
+      const { text } = args.createInput;
+      const result = await dataRequest(`insertOne`, {
+        document: {
+          text,
         },
       });
+      return result.insertedId;
+    },
+
+    updatePost: async (
+      _: never,
+      args: {
+        id: any;
+        updateInput: { text: string; id: string };
+      }
+    ) => {
+      const id = args.id;
+      const { text } = args.updateInput;
+      const result = await dataRequest("updateOne", {
+        filter: { _id: { $oid: id } },
+        update: {
+          $set: {
+            text: text,
+          },
+        },
+      });
+      console.log({ result });
       return result;
     },
-    updatePost: () => {
-      return null;
-    },
-    deletePost: () => {
-      return null;
+
+    deletePost: async (_: never, args: any) => {
+      const id = args.id;
+      const result = await dataRequest("deleteOne", {
+        filter: { _id: { $oid: id } },
+      });
+      console.log({ result });
+      return result;
     },
   },
 };
